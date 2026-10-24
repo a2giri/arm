@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="ja" class="h-full bg-slate-950 text-slate-100 select-none">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>arm Browser</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          colors: {
+            brand: {
+              500: '#3b82f6', // Electric Blue
+              600: '#2563eb',
+              400: '#60a5fa',
+              900: '#1e3a8a'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #090d16; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    
+    .tab-active {
+      background-color: #0f172a !important;
+      border-color: #334155 !important;
+      color: #f8fafc !important;
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.08); }
+    }
+    .glow-effect { animation: pulseGlow 6s ease-in-out infinite; }
+
+    /* モバイル・縦長画面向けの調整 */
+    @media (max-width: 768px), (orientation: portrait) {
+      .desktop-only { display: none !important; }
+      .mobile-only { display: flex !important; }
+      .split-container { flex-direction: column !important; }
+    }
+    @media (min-width: 769px) and (orientation: landscape) {
+      .desktop-only { display: flex !important; }
+      .mobile-only { display: none !important; }
+      .split-container { flex-direction: row !important; }
+    }
+
+    /* ライトモード用のスタイル上書き */
+    body.light-mode {
+      background-color: #f8fafc !important;
+      color: #0f172a !important;
+    }
+    body.light-mode header,
+    body.light-mode footer,
+    body.light-mode #mobileTabModal,
+    body.light-mode #historyModal,
+    body.light-mode #downloadModal,
+    body.light-mode #viewSourceModal,
+    body.light-mode .pane-header {
+      background-color: #f1f5f9 !important;
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+    body.light-mode #bookmarksBar {
+      background-color: #e2e8f0 !important;
+      border-color: #cbd5e1 !important;
+    }
+    body.light-mode .bm-item {
+      color: #334155 !important;
+    }
+    body.light-mode .bm-item:hover {
+      background-color: #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+    body.light-mode #speedDialPage {
+      background: linear-gradient(to bottom, #f8fafc, #e2e8f0, #f8fafc) !important;
+    }
+    body.light-mode #urlForm,
+    body.light-mode form {
+      background-color: #ffffff !important;
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+    body.light-mode #urlInput,
+    body.light-mode #centerSearchInput,
+    body.light-mode #historySearchInput {
+      color: #0f172a !important;
+    }
+    body.light-mode .tab-active {
+      background-color: #ffffff !important;
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+    body.light-mode .bg-slate-900,
+    body.light-mode .bg-slate-950,
+    body.light-mode .bg-slate-950\/90,
+    body.light-mode .bg-slate-950\/80,
+    body.light-mode .bg-slate-900\/60,
+    body.light-mode .bg-slate-900\/90,
+    body.light-mode .bg-slate-900\/95 {
+      background-color: #ffffff !important;
+    }
+    body.light-mode .text-slate-100,
+    body.light-mode .text-slate-200,
+    body.light-mode .text-slate-300 {
+      color: #1e293b !important;
+    }
+    body.light-mode .text-slate-400,
+    body.light-mode .text-slate-500 {
+      color: #64748b !important;
+    }
+    body.light-mode .border-slate-800,
+    body.light-mode .border-slate-700,
+    body.light-mode .border-slate-800\/80,
+    body.light-mode .border-slate-800\/60,
+    body.light-mode .border-slate-800\/40 {
+      border-color: #e2e8f0 !important;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans overflow-hidden bg-slate-950 text-slate-100">
+
+  <header class="bg-slate-900 border-b border-slate-800/80 flex flex-col z-30 shadow-2xl flex-shrink-0">
+    
+    <!-- Top Tab Bar (Desktop / 横長画面用) -->
+    <div class="desktop-only items-center px-2 pt-2 space-x-1 bg-slate-950/80 border-b border-slate-800/60 relative">
+      <div id="tabContainer" class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar max-w-[calc(100%-48px)]">
+        <!-- Tabs rendered dynamically -->
+      </div>
+      
+      <!-- New Tab Button (タブバー右側に固定配置) -->
+      <button id="newTabBtn" type="button" class="p-1.5 px-2.5 rounded-lg bg-slate-800/80 hover:bg-brand-500 text-slate-300 hover:text-white transition text-xs flex-shrink-0 flex items-center justify-center space-x-1 ml-1" title="新しいタブを開く">
+        <i class="fa-solid fa-plus"></i>
+      </button>
+
+      <div class="flex-1 min-w-[10px]"></div>
+    </div>
+
+    <!-- Navigation & URL Address Bar -->
+    <div class="p-2 flex items-center space-x-1.5 md:space-x-2 bg-slate-900">
+      <!-- Navigation Controls (Desktop / 横長画面用) -->
+      <div class="desktop-only items-center space-x-1 text-slate-400">
+        <button id="backBtn" type="button" class="p-2 rounded-lg hover:bg-slate-800 hover:text-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition text-xs" title="戻る">
+          <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <button id="forwardBtn" type="button" class="p-2 rounded-lg hover:bg-slate-800 hover:text-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition text-xs" title="進む">
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+        <button id="reloadBtn" type="button" class="p-2 rounded-lg hover:bg-slate-800 hover:text-slate-100 transition text-xs" title="再読み込み">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+        <button id="homeBtn" type="button" class="p-2 rounded-lg hover:bg-slate-800 hover:text-slate-100 transition text-xs" title="ホーム画面">
+          <i class="fa-solid fa-house"></i>
+        </button>
+      </div>
+
+      <!-- URL Search Form -->
+      <form id="urlForm" class="flex-1 flex items-center bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 md:py-1.5 focus-within:border-brand-500/80 focus-within:ring-2 focus-within:ring-brand-500/20 transition group shadow-inner">
+        <i id="securityIcon" class="fa-solid fa-lock text-emerald-400 text-xs mr-2 transition"></i>
+        <input type="text" id="urlInput" placeholder="Yahoo!で検索またはアドレスを入力" class="w-full bg-transparent text-xs text-slate-100 focus:outline-none placeholder-slate-500">
+        
+        <!-- URLバー内 ➕ 新規タブボタン -->
+        <button type="button" id="urlNewTabBtn" class="ml-1 text-slate-400 hover:text-brand-400 transition text-xs p-1" title="新しいタブを開く">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+        <!-- テーマ切り替えボタン -->
+        <button type="button" id="themeToggleBtn" class="ml-1 text-slate-400 hover:text-amber-400 transition text-xs p-1" title="ダーク / ライトモード切替">
+          <i id="themeIcon" class="fa-solid fa-moon"></i>
+        </button>
+        <button type="button" id="bookmarkBtn" class="ml-1 text-slate-500 hover:text-amber-400 transition text-xs p-1" title="お気に入りに追加">
+          <i class="fa-regular fa-star"></i>
+        </button>
+        <button type="submit" class="ml-1.5 px-2.5 py-1 bg-brand-500 hover:bg-brand-600 text-white font-medium text-xs rounded-lg transition shadow-md flex items-center">
+          <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+      </form>
+
+      <!-- 分割画面 切り替えボタン -->
+      <button id="splitToggleHeaderBtn" type="button" class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-brand-400 transition text-xs flex items-center space-x-1" title="画面分割 (2つのタブを並べて表示)">
+        <i class="fa-solid fa-columns text-sm"></i>
+        <span class="hidden xl:inline text-[11px] font-medium ml-0.5">分割</span>
+      </button>
+
+      <!-- 右上 … メニューボタン -->
+      <div class="relative">
+        <button id="menuBtn" type="button" class="p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition text-xs flex items-center justify-center" title="メニュー">
+          <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+        </button>
+
+        <!-- ドロップダウンメニュー -->
+        <div id="moreMenu" class="hidden absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl py-2 z-50 text-xs text-slate-200">
+          
+          <!-- 閲覧履歴 -->
+          <button id="historyManagerBtn" type="button" class="w-full px-3 py-2 text-left hover:bg-slate-800 flex items-center space-x-2.5 transition">
+            <i class="fa-solid fa-clock-rotate-left text-slate-400 w-4 text-center"></i>
+            <span>閲覧履歴</span>
+          </button>
+
+          <!-- 画面分割 モード切替 -->
+          <button id="splitToggleMenuBtn" type="button" class="w-full px-3 py-2 text-left hover:bg-slate-800 flex items-center space-x-2.5 transition">
+            <i class="fa-solid fa-columns text-slate-400 w-4 text-center"></i>
+            <span id="splitMenuText">画面分割モード (並べて表示)</span>
+          </button>
+
+          <!-- ズーム調整 -->
+          <div class="px-3 py-2 border-t border-b border-slate-800/80 flex items-center justify-between my-1">
+            <span class="text-slate-400 flex items-center space-x-2">
+              <i class="fa-solid fa-magnifying-glass-plus text-xs"></i>
+              <span>ズーム</span>
+            </span>
+            <div class="flex items-center space-x-1.5 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+              <button id="zoomOutBtn" type="button" class="px-1 text-slate-400 hover:text-white transition font-bold" title="縮小">-</button>
+              <span id="zoomLevelDisplay" class="font-mono text-[11px] min-w-[36px] text-center">100%</span>
+              <button id="zoomInBtn" type="button" class="px-1 text-slate-400 hover:text-white transition font-bold" title="拡大">+</button>
+            </div>
+          </div>
+
+          <!-- 全画面切り替え -->
+          <button id="fullscreenBtn" type="button" class="w-full px-3 py-2 text-left hover:bg-slate-800 flex items-center space-x-2.5 transition">
+            <i class="fa-solid fa-expand text-slate-400 w-4 text-center"></i>
+            <span id="fullscreenBtnText">全画面表示</span>
+          </button>
+
+          <!-- ページのソース表示 -->
+          <button id="viewSourceBtn" type="button" class="w-full px-3 py-2 text-left hover:bg-slate-800 flex items-center space-x-2.5 transition">
+            <i class="fa-solid fa-code text-slate-400 w-4 text-center"></i>
+            <span>ページのソースを表示</span>
+          </button>
+
+          <!-- ダウンロード管理 -->
+          <button id="downloadManagerBtn" type="button" class="w-full px-3 py-2 text-left hover:bg-slate-800 flex items-center space-x-2.5 transition">
+            <i class="fa-solid fa-download text-slate-400 w-4 text-center"></i>
+            <span>ダウンロード管理</span>
+          </button>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Bookmarks Bar -->
+    <div id="bookmarksBar" class="flex items-center space-x-2 px-3 py-1 bg-slate-950/90 border-t border-slate-800/40 text-[11px] overflow-x-auto no-scrollbar">
+      <span class="text-slate-500 text-[10px] uppercase font-bold mr-1 flex items-center flex-shrink-0">
+        <i class="fa-solid fa-star text-amber-400 mr-1.5"></i>
+      </span>
+      <!-- Bookmarks rendered dynamically -->
+    </div>
+  </header>
+
+  <main class="flex-1 relative bg-slate-950 overflow-hidden flex flex-col">
+
+    <!-- Modern New Tab Page (Start Page) -->
+    <div id="speedDialPage" class="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 overflow-y-auto bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+      <div class="w-full max-w-2xl space-y-8 text-center">
+        
+        <!-- App Hero Branding -->
+        <div class="space-y-3">
+          <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-cyan-400 mx-auto flex items-center justify-center shadow-2xl shadow-brand-500/30 glow-effect">
+            <i class="fa-solid fa-compass text-white text-3xl"></i>
+          </div>
+          <h1 class="text-3xl font-bold tracking-tight text-slate-100">arm Browser</h1>
+          <p class="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+            シンプルで高速な Web ブラウジング体験
+          </p>
+        </div>
+
+        <!-- Center Search Input -->
+        <div class="max-w-xl mx-auto">
+          <form onsubmit="event.preventDefault(); navigateTo(document.getElementById('centerSearchInput').value);" class="flex items-center bg-slate-900/90 border border-slate-700/80 hover:border-brand-500/60 rounded-2xl p-2 shadow-2xl transition group focus-within:ring-2 focus-within:ring-brand-500/30">
+            <i class="fa-solid fa-magnifying-glass text-slate-400 ml-3 mr-2 text-sm group-focus-within:text-brand-400"></i>
+            <input id="centerSearchInput" type="text" placeholder="Yahoo!で検索、またはURLを入力..." class="w-full bg-transparent text-sm text-slate-100 focus:outline-none px-2 py-1 placeholder-slate-500">
+            <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-semibold shadow-lg shadow-brand-500/20 transition">
+              検索
+            </button>
+          </form>
+        </div>
+
+        <!-- Quick Launch Grid -->
+        <div class="space-y-3 pt-2">
+          <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">人気・おすすめサイト</p>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+            <button type="button" onclick="navigateTo('https://www.yahoo.co.jp')" class="p-4 bg-slate-900/60 hover:bg-slate-800/80 rounded-2xl border border-slate-800/80 hover:border-brand-500/40 transition flex flex-col items-center space-y-2.5 group shadow-lg">
+              <div class="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center group-hover:scale-110 transition font-bold text-lg">
+                Y!
+              </div>
+              <span class="text-xs font-medium text-slate-300">Yahoo! JAPAN</span>
+            </button>
+
+            <button type="button" onclick="navigateTo('https://ja.wikipedia.org')" class="p-4 bg-slate-900/60 hover:bg-slate-800/80 rounded-2xl border border-slate-800/80 hover:border-brand-500/40 transition flex flex-col items-center space-y-2.5 group shadow-lg">
+              <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-200 group-hover:scale-110 transition">
+                <i class="fa-brands fa-wikipedia-w text-lg"></i>
+              </div>
+              <span class="text-xs font-medium text-slate-300">Wikipedia</span>
+            </button>
+
+            <button type="button" onclick="navigateTo('https://news.ycombinator.com')" class="p-4 bg-slate-900/60 hover:bg-slate-800/80 rounded-2xl border border-slate-800/80 hover:border-brand-500/40 transition flex flex-col items-center space-y-2.5 group shadow-lg">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition">
+                <i class="fa-brands fa-hacker-news text-lg"></i>
+              </div>
+              <span class="text-xs font-medium text-slate-300">Hacker News</span>
+            </button>
+
+            <button type="button" onclick="navigateTo('https://example.com')" class="p-4 bg-slate-900/60 hover:bg-slate-800/80 rounded-2xl border border-slate-800/80 hover:border-brand-500/40 transition flex flex-col items-center space-y-2.5 group shadow-lg">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition">
+                <i class="fa-solid fa-vial text-lg"></i>
+              </div>
+              <span class="text-xs font-medium text-slate-300">Example Web</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Active Viewport Main Container -->
+    <div id="viewportContainer" class="w-full h-full relative z-0 flex flex-col md:flex-row split-container">
+      
+      <!-- Primary Split View Pane (左/上画面) -->
+      <div id="panePrimary" class="flex-1 h-full relative flex flex-col border-b md:border-b-0 md:border-r border-slate-800/80 transition-all min-h-0">
+        <!-- Split Mode Header for Pane 1 -->
+        <div id="panePrimaryHeader" class="pane-header hidden items-center justify-between bg-slate-900 px-3 py-1.5 border-b border-slate-800 text-xs z-10 flex-shrink-0">
+          <div class="flex items-center space-x-2 flex-1 min-w-0">
+            <span class="px-2 py-0.5 bg-brand-500/20 text-brand-400 text-[10px] font-bold rounded uppercase">画面 1</span>
+            <select id="panePrimaryTabSelect" class="bg-slate-950 text-slate-200 border border-slate-800 rounded px-2 py-1 text-xs focus:outline-none flex-1 max-w-[200px] truncate">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+          <span class="text-[10px] text-slate-500 font-mono">プライマリ</span>
+        </div>
+        <div id="panePrimaryIframeBox" class="flex-1 relative h-full w-full overflow-hidden">
+          <!-- Dynamic iframe container for primary pane -->
+        </div>
+      </div>
+
+      <!-- Secondary Split View Pane (右/下画面) -->
+      <div id="paneSecondary" class="flex-1 h-full relative hidden flex-col transition-all min-h-0">
+        <!-- Split Mode Header for Pane 2 -->
+        <div id="paneSecondaryHeader" class="pane-header flex items-center justify-between bg-slate-900 px-3 py-1.5 border-b border-slate-800 text-xs z-10 flex-shrink-0">
+          <div class="flex items-center space-x-2 flex-1 min-w-0">
+            <span class="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] font-bold rounded uppercase">画面 2</span>
+            <select id="paneSecondaryTabSelect" class="bg-slate-950 text-slate-200 border border-slate-800 rounded px-2 py-1 text-xs focus:outline-none flex-1 max-w-[200px] truncate">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+          <button id="closeSplitBtn" type="button" class="p-1 text-slate-400 hover:text-white transition" title="分割表示を解除">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+        <div id="paneSecondaryIframeBox" class="flex-1 relative h-full w-full overflow-hidden">
+          <!-- Dynamic iframe container for secondary pane -->
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Mobile Bottom Toolbar (スマホ・縦長画面用固定ナビ) -->
+  <footer class="mobile-only items-center justify-around bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-2 py-2 z-30 flex-shrink-0">
+    <button id="mobileBackBtn" type="button" class="p-2.5 text-slate-400 hover:text-white active:scale-95 transition disabled:opacity-30" title="戻る">
+      <i class="fa-solid fa-chevron-left text-base"></i>
+    </button>
+    <button id="mobileForwardBtn" type="button" class="p-2.5 text-slate-400 hover:text-white active:scale-95 transition disabled:opacity-30" title="進む">
+      <i class="fa-solid fa-chevron-right text-base"></i>
+    </button>
+    <button id="mobileHomeBtn" type="button" class="p-2.5 text-slate-400 hover:text-white active:scale-95 transition" title="ホーム">
+      <i class="fa-solid fa-house text-base"></i>
+    </button>
+    <!-- スマホ下部ナビ内 ➕ 新規タブボタン -->
+    <button id="mobileQuickPlusBtn" type="button" class="p-2.5 text-brand-400 hover:text-white active:scale-95 transition font-bold" title="新しいタブを開く">
+      <i class="fa-solid fa-plus text-lg"></i>
+    </button>
+    <button id="mobileTabsBtn" type="button" class="relative p-2 text-slate-300 hover:text-white active:scale-95 transition" title="タブ一覧">
+      <div class="w-6 h-6 border-2 border-slate-300 rounded-lg flex items-center justify-center font-bold text-[10px]" id="mobileTabCounter">
+        1
+      </div>
+    </button>
+  </footer>
+
+  <!-- Mobile Tab Switcher Modal -->
+  <div id="mobileTabModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-lg z-50 flex flex-col p-4 hidden">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+      <h3 class="font-bold text-slate-100 text-sm flex items-center space-x-2">
+        <i class="fa-solid fa-clone text-brand-500"></i>
+        <span>開いているタブ</span>
+      </h3>
+      <div class="flex items-center space-x-2">
+        <button id="mobileNewTabBtn" type="button" class="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-1">
+          <i class="fa-solid fa-plus text-xs"></i>
+          <span>新しいタブ</span>
+        </button>
+        <button id="closeMobileTabModalBtn" type="button" class="p-2 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+    </div>
+    <div id="mobileTabList" class="flex-1 overflow-y-auto py-4 space-y-3">
+      <!-- Mobile tab cards rendered dynamically -->
+    </div>
+  </div>
+
+  <!-- 閲覧履歴 モーダル -->
+  <div id="historyModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center space-x-2 text-slate-100 font-bold text-sm">
+          <i class="fa-solid fa-clock-rotate-left text-brand-400"></i>
+          <span>閲覧履歴</span>
+        </div>
+        <button id="closeHistoryModalBtn" type="button" class="p-1 text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Search & Controls Bar -->
+      <div class="py-3 border-b border-slate-800/80 flex items-center space-x-2">
+        <div class="flex-1 flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 focus-within:border-brand-500">
+          <i class="fa-solid fa-magnifying-glass text-slate-500 text-xs mr-2"></i>
+          <input type="text" id="historySearchInput" placeholder="履歴を検索..." class="w-full bg-transparent text-xs text-slate-100 focus:outline-none">
+        </div>
+        <button id="clearHistoryBtn" type="button" class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-xs font-semibold transition border border-red-500/20 flex-shrink-0">
+          全消去
+        </button>
+      </div>
+
+      <!-- History List -->
+      <div id="historyList" class="flex-1 overflow-y-auto py-3 space-y-2">
+        <!-- History items rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ページのソース表示 モーダル -->
+  <div id="viewSourceModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex flex-col p-4 hidden">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <div class="flex items-center space-x-2 text-slate-100 font-semibold text-xs">
+        <i class="fa-solid fa-code text-brand-400"></i>
+        <span>ページのソースコード</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button id="copySourceBtn" type="button" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs transition flex items-center space-x-1">
+          <i class="fa-solid fa-copy"></i>
+          <span>コピー</span>
+        </button>
+        <button id="closeSourceModalBtn" type="button" class="p-1.5 text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+    </div>
+    <div class="flex-1 overflow-hidden mt-3 relative rounded-xl border border-slate-800 bg-slate-900/90">
+      <textarea id="sourceTextarea" readonly class="w-full h-full p-4 bg-transparent font-mono text-xs text-emerald-400 focus:outline-none resize-none leading-relaxed select-text"></textarea>
+    </div>
+  </div>
+
+  <!-- ダウンロード管理 モーダル -->
+  <div id="downloadModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col max-h-[80vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center space-x-2 text-slate-100 font-bold text-sm">
+          <i class="fa-solid fa-download text-brand-400"></i>
+          <span>ダウンロード管理</span>
+        </div>
+        <button id="closeDownloadModalBtn" type="button" class="p-1 text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Quick Download Action -->
+      <div class="py-4 border-b border-slate-800/80 flex items-center justify-between">
+        <div>
+          <div class="text-xs font-semibold text-slate-200">現在のページを保存</div>
+          <div class="text-[10px] text-slate-400">表示中のコンテンツをHTMLファイルとしてダウンロードします</div>
+        </div>
+        <button id="downloadCurrentPageBtn" type="button" class="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-semibold shadow-md transition flex items-center space-x-1.5 flex-shrink-0">
+          <i class="fa-solid fa-file-arrow-down"></i>
+          <span>保存</span>
+        </button>
+      </div>
+
+      <!-- Downloads History -->
+      <div class="flex-1 overflow-y-auto py-3 space-y-2">
+        <div class="flex items-center justify-between text-[11px] font-semibold text-slate-400 mb-2">
+          <span>履歴</span>
+          <button id="clearDownloadHistoryBtn" type="button" class="text-slate-500 hover:text-red-400 transition text-[10px]">履歴を消去</button>
+        </div>
+        <div id="downloadList" class="space-y-2">
+          <!-- Download items rendered dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== arm Browser (No-Proxy / Real Chromium via <webview>) ==========
+    const SEARCH_ENGINE = 'https://search.yahoo.co.jp/search?p=';
+    const DISCARD_TIMEOUT_MS = 10 * 60 * 1000; // 10分非アクティブで破棄
+
+    const appState = {
+      searchEngine: SEARCH_ENGINE,
+      theme: localStorage.getItem('ep_theme') || 'dark',
+      bookmarks: JSON.parse(localStorage.getItem('ep_bookmarks') || '[]'),
+      history: JSON.parse(localStorage.getItem('ep_history') || '[]'),
+      downloads: JSON.parse(localStorage.getItem('ep_downloads') || '[]'),
+      tabs: [],
+      activeTabId: null,
+      splitTabId: null,
+      isSplitMode: false,
+      zoomLevel: 100
+    };
+
+    if (appState.bookmarks.length === 0) {
+      appState.bookmarks = [
+        { title: 'Yahoo! JAPAN', url: 'https://www.yahoo.co.jp' },
+        { title: 'Wikipedia', url: 'https://ja.wikipedia.org' },
+        { title: 'Hacker News', url: 'https://news.ycombinator.com' },
+        { title: 'Google', url: 'https://www.google.com' },
+        { title: 'YouTube', url: 'https://www.youtube.com' }
+      ];
+    }
+
+    const elements = {
+      tabContainer: document.getElementById('tabContainer'),
+      newTabBtn: document.getElementById('newTabBtn'),
+      urlNewTabBtn: document.getElementById('urlNewTabBtn'),
+      urlForm: document.getElementById('urlForm'),
+      urlInput: document.getElementById('urlInput'),
+      themeToggleBtn: document.getElementById('themeToggleBtn'),
+      themeIcon: document.getElementById('themeIcon'),
+      backBtn: document.getElementById('backBtn'),
+      forwardBtn: document.getElementById('forwardBtn'),
+      reloadBtn: document.getElementById('reloadBtn'),
+      homeBtn: document.getElementById('homeBtn'),
+      bookmarkBtn: document.getElementById('bookmarkBtn'),
+      bookmarksBar: document.getElementById('bookmarksBar'),
+      speedDialPage: document.getElementById('speedDialPage'),
+      viewportContainer: document.getElementById('viewportContainer'),
+      panePrimary: document.getElementById('panePrimary'),
+      paneSecondary: document.getElementById('paneSecondary'),
+      panePrimaryHeader: document.getElementById('panePrimaryHeader'),
+      paneSecondaryHeader: document.getElementById('paneSecondaryHeader'),
+      panePrimaryIframeBox: document.getElementById('panePrimaryIframeBox'),
+      paneSecondaryIframeBox: document.getElementById('paneSecondaryIframeBox'),
+      panePrimaryTabSelect: document.getElementById('panePrimaryTabSelect'),
+      paneSecondaryTabSelect: document.getElementById('paneSecondaryTabSelect'),
+      splitToggleHeaderBtn: document.getElementById('splitToggleHeaderBtn'),
+      splitToggleMenuBtn: document.getElementById('splitToggleMenuBtn'),
+      splitMenuText: document.getElementById('splitMenuText'),
+      closeSplitBtn: document.getElementById('closeSplitBtn'),
+      mobileBackBtn: document.getElementById('mobileBackBtn'),
+      mobileForwardBtn: document.getElementById('mobileForwardBtn'),
+      mobileHomeBtn: document.getElementById('mobileHomeBtn'),
+      mobileQuickPlusBtn: document.getElementById('mobileQuickPlusBtn'),
+      mobileTabsBtn: document.getElementById('mobileTabsBtn'),
+      mobileTabCounter: document.getElementById('mobileTabCounter'),
+      mobileTabModal: document.getElementById('mobileTabModal'),
+      mobileTabList: document.getElementById('mobileTabList'),
+      mobileNewTabBtn: document.getElementById('mobileNewTabBtn'),
+      closeMobileTabModalBtn: document.getElementById('closeMobileTabModalBtn'),
+      menuBtn: document.getElementById('menuBtn'),
+      moreMenu: document.getElementById('moreMenu'),
+      zoomInBtn: document.getElementById('zoomInBtn'),
+      zoomOutBtn: document.getElementById('zoomOutBtn'),
+      zoomLevelDisplay: document.getElementById('zoomLevelDisplay'),
+      fullscreenBtn: document.getElementById('fullscreenBtn'),
+      fullscreenBtnText: document.getElementById('fullscreenBtnText'),
+      viewSourceBtn: document.getElementById('viewSourceBtn'),
+      viewSourceModal: document.getElementById('viewSourceModal'),
+      sourceTextarea: document.getElementById('sourceTextarea'),
+      copySourceBtn: document.getElementById('copySourceBtn'),
+      closeSourceModalBtn: document.getElementById('closeSourceModalBtn'),
+      downloadManagerBtn: document.getElementById('downloadManagerBtn'),
+      downloadModal: document.getElementById('downloadModal'),
+      closeDownloadModalBtn: document.getElementById('closeDownloadModalBtn'),
+      downloadCurrentPageBtn: document.getElementById('downloadCurrentPageBtn'),
+      downloadList: document.getElementById('downloadList'),
+      clearDownloadHistoryBtn: document.getElementById('clearDownloadHistoryBtn'),
+      historyManagerBtn: document.getElementById('historyManagerBtn'),
+      historyModal: document.getElementById('historyModal'),
+      closeHistoryModalBtn: document.getElementById('closeHistoryModalBtn'),
+      historySearchInput: document.getElementById('historySearchInput'),
+      clearHistoryBtn: document.getElementById('clearHistoryBtn'),
+      historyList: document.getElementById('historyList'),
+      securityIcon: document.getElementById('securityIcon')
+    };
+
+    // ---------- Tab / Webview management ----------
+    function createTab(url = '') {
+      const id = 'tab_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+      const tab = {
+        id,
+        title: '新しいタブ',
+        url: url || '',
+        lastActiveTime: Date.now(),
+        isDiscarded: false
+      };
+      appState.tabs.push(tab);
+      switchTab(id);
+      if (url) {
+        navigateTo(url);
+      } else {
+        renderTabs();
+        showSpeedDial();
+      }
+      setTimeout(() => {
+        elements.urlInput.value = '';
+        elements.urlInput.focus();
+        if (elements.tabContainer) {
+          elements.tabContainer.scrollLeft = elements.tabContainer.scrollWidth;
+        }
+      }, 50);
+    }
+
+    function switchTab(id) {
+      appState.activeTabId = id;
+      const tab = getActiveTab();
+      if (tab) {
+        tab.lastActiveTime = Date.now();
+        if (tab.isDiscarded && tab.url) {
+          tab.isDiscarded = false;
+          // re-create webview and load
+          navigateTo(tab.url, false);
+        }
+      }
+      renderTabs();
+      updateViewports();
+      if (!tab || !tab.url) {
+        showSpeedDial();
+        elements.urlInput.value = '';
+        updateSecurityIcon('');
+      } else {
+        hideSpeedDial();
+        elements.urlInput.value = tab.url;
+        updateSecurityIcon(tab.url);
+        updateNavButtons();
+      }
+    }
+
+    function closeTab(id, e) {
+      if (e) e.stopPropagation();
+      removeWebviewForTab(id);
+
+      if (appState.tabs.length === 1) {
+        const tab = appState.tabs[0];
+        tab.url = '';
+        tab.title = '新しいタブ';
+        tab.isDiscarded = false;
+        if (appState.isSplitMode) toggleSplitMode();
+        showSpeedDial();
+        renderTabs();
+        elements.urlInput.value = '';
+        return;
+      }
+
+      const index = appState.tabs.findIndex(t => t.id === id);
+      appState.tabs = appState.tabs.filter(t => t.id !== id);
+
+      if (appState.splitTabId === id) {
+        const remaining = appState.tabs.find(t => t.id !== appState.activeTabId);
+        appState.splitTabId = remaining ? remaining.id : null;
+        if (!appState.splitTabId) appState.isSplitMode = false;
+      }
+
+      if (appState.activeTabId === id) {
+        const nextTab = appState.tabs[Math.max(0, index - 1)];
+        switchTab(nextTab.id);
+      } else {
+        renderTabs();
+        updateViewports();
+      }
+    }
+
+    function getActiveTab() {
+      return appState.tabs.find(t => t.id === appState.activeTabId) || appState.tabs[0];
+    }
+
+    function getWebviewId(tabId) {
+      return `webview_${tabId}`;
+    }
+
+    function getOrCreateWebviewForTab(tab) {
+      let wv = document.getElementById(getWebviewId(tab.id));
+      if (!wv) {
+        wv = document.createElement('webview');
+        wv.id = getWebviewId(tab.id);
+        wv.className = 'w-full h-full border-none absolute inset-0 hidden';
+        wv.setAttribute('allowpopups', '');
+        wv.setAttribute('webpreferences', 'contextIsolation=yes, nativeWindowOpen=yes');
+        // partition for optional isolation (shared cookies by default like Chrome)
+        // wv.setAttribute('partition', 'persist:arm');
+        attachWebviewListeners(wv, tab.id);
+      }
+      return wv;
+    }
+
+    function removeWebviewForTab(tabId) {
+      const wv = document.getElementById(getWebviewId(tabId));
+      if (wv) {
+        try { wv.stop(); } catch (_) {}
+        wv.remove();
+      }
+    }
+
+    function attachWebviewListeners(wv, tabId) {
+      wv.addEventListener('did-start-loading', () => {
+        const tab = appState.tabs.find(t => t.id === tabId);
+        if (!tab) return;
+        if (elements.reloadBtn) {
+          elements.reloadBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        }
+      });
+
+      wv.addEventListener('did-stop-loading', () => {
+        if (elements.reloadBtn) {
+          elements.reloadBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i>';
+        }
+        updateNavButtons();
+      });
+
+      wv.addEventListener('did-navigate', (e) => {
+        const tab = appState.tabs.find(t => t.id === tabId);
+        if (!tab) return;
+        tab.url = e.url;
+        tab.lastActiveTime = Date.now();
+        if (tabId === appState.activeTabId) {
+          elements.urlInput.value = e.url;
+          updateSecurityIcon(e.url);
+          hideSpeedDial();
+        }
+        saveHistory(e.url, tab.title);
+        renderTabs();
+        updateNavButtons();
+      });
+
+      wv.addEventListener('did-navigate-in-page', (e) => {
+        if (!e.isMainFrame) return;
+        const tab = appState.tabs.find(t => t.id === tabId);
+        if (!tab) return;
+        tab.url = e.url;
+        if (tabId === appState.activeTabId) {
+          elements.urlInput.value = e.url;
+          updateSecurityIcon(e.url);
+        }
+        updateNavButtons();
+      });
+
+      wv.addEventListener('page-title-updated', (e) => {
+        const tab = appState.tabs.find(t => t.id === tabId);
+        if (!tab) return;
+        tab.title = e.title || tab.url || '新しいタブ';
+        renderTabs();
+        if (tabId === appState.activeTabId) {
+          document.title = tab.title + ' - arm Browser';
+        }
+      });
+
+      wv.addEventListener('page-favicon-updated', (e) => {
+        // could store favicon later
+      });
+
+      wv.addEventListener('did-fail-load', (e) => {
+        if (e.errorCode === -3) return; // aborted
+        console.warn('Load failed', e.errorCode, e.errorDescription, e.validatedURL);
+      });
+
+      wv.addEventListener('new-window', (e) => {
+        // open in new tab
+        e.preventDefault();
+        if (e.url) createTab(e.url);
+      });
+    }
+
+    function applyZoom() {
+      if (elements.zoomLevelDisplay) {
+        elements.zoomLevelDisplay.textContent = `${appState.zoomLevel}%`;
+      }
+      const factor = appState.zoomLevel / 100;
+      appState.tabs.forEach(tab => {
+        const wv = document.getElementById(getWebviewId(tab.id));
+        if (wv && typeof wv.setZoomFactor === 'function') {
+          try { wv.setZoomFactor(factor); } catch (_) {}
+        }
+      });
+    }
+
+    function toggleSplitMode() {
+      appState.isSplitMode = !appState.isSplitMode;
+      if (appState.isSplitMode) {
+        if (appState.tabs.length < 2) {
+          const newTabId = 'tab_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+          appState.tabs.push({
+            id: newTabId,
+            title: '新しいタブ',
+            url: '',
+            lastActiveTime: Date.now(),
+            isDiscarded: false
+          });
+          appState.splitTabId = newTabId;
+        } else {
+          const otherTab = appState.tabs.find(t => t.id !== appState.activeTabId);
+          appState.splitTabId = otherTab ? otherTab.id : appState.tabs[0].id;
+        }
+      }
+      if (elements.splitToggleHeaderBtn) {
+        if (appState.isSplitMode) {
+          elements.splitToggleHeaderBtn.classList.add('text-brand-400', 'bg-slate-800');
+        } else {
+          elements.splitToggleHeaderBtn.classList.remove('text-brand-400', 'bg-slate-800');
+        }
+      }
+      if (elements.splitMenuText) {
+        elements.splitMenuText.textContent = appState.isSplitMode ? '画面分割を解除' : '画面分割モード (並べて表示)';
+      }
+      renderTabs();
+      updateViewports();
+    }
+
+    function updateSplitSelectOptions() {
+      if (!appState.isSplitMode) return;
+      [elements.panePrimaryTabSelect, elements.paneSecondaryTabSelect].forEach((selectEl, idx) => {
+        if (!selectEl) return;
+        selectEl.innerHTML = '';
+        appState.tabs.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.id;
+          opt.textContent = t.title || '新しいタブ';
+          if (idx === 0 && t.id === appState.activeTabId) opt.selected = true;
+          if (idx === 1 && t.id === appState.splitTabId) opt.selected = true;
+          selectEl.appendChild(opt);
+        });
+      });
+    }
+
+    function updateViewports() {
+      updateSplitSelectOptions();
+
+      if (!appState.isSplitMode) {
+        elements.panePrimaryHeader.classList.add('hidden');
+        elements.paneSecondary.classList.add('hidden');
+
+        appState.tabs.forEach(tab => {
+          const wv = getOrCreateWebviewForTab(tab);
+          elements.panePrimaryIframeBox.appendChild(wv);
+          if (tab.id === appState.activeTabId && tab.url && !tab.isDiscarded) {
+            wv.classList.remove('hidden');
+          } else {
+            wv.classList.add('hidden');
+          }
+        });
+      } else {
+        elements.panePrimaryHeader.classList.remove('hidden');
+        elements.panePrimaryHeader.classList.add('flex');
+        elements.paneSecondary.classList.remove('hidden');
+        elements.paneSecondary.classList.add('flex');
+
+        const primaryTab = appState.tabs.find(t => t.id === appState.activeTabId);
+        const secondaryTab = appState.tabs.find(t => t.id === appState.splitTabId) || appState.tabs[0];
+
+        appState.tabs.forEach(tab => {
+          const wv = getOrCreateWebviewForTab(tab);
+          if (tab.id === primaryTab.id) {
+            elements.panePrimaryIframeBox.appendChild(wv);
+            if (tab.url && !tab.isDiscarded) wv.classList.remove('hidden');
+            else wv.classList.add('hidden');
+          } else if (tab.id === secondaryTab.id) {
+            elements.paneSecondaryIframeBox.appendChild(wv);
+            if (tab.url && !tab.isDiscarded) wv.classList.remove('hidden');
+            else wv.classList.add('hidden');
+          } else {
+            wv.classList.add('hidden');
+          }
+        });
+      }
+      applyZoom();
+    }
+
+    function renderTabs() {
+      elements.tabContainer.innerHTML = '';
+      appState.tabs.forEach(tab => {
+        const isActive = tab.id === appState.activeTabId;
+        const isSplitActive = appState.isSplitMode && tab.id === appState.splitTabId;
+
+        const tabEl = document.createElement('div');
+        tabEl.className = `group relative flex items-center space-x-2 px-3 py-1.5 rounded-t-xl text-xs font-medium cursor-pointer transition border-t border-x border-transparent max-w-[160px] flex-1 truncate ${
+          isActive ? 'tab-active bg-slate-900 border-slate-700 text-slate-100 ring-1 ring-brand-500/30' :
+          isSplitActive ? 'bg-slate-900/80 border-cyan-500/40 text-cyan-300' : 'bg-slate-950/40 text-slate-400 hover:bg-slate-900/60 hover:text-slate-200'
+        } ${tab.isDiscarded ? 'opacity-60' : ''}`;
+
+        tabEl.onclick = () => switchTab(tab.id);
+
+        const statusIcon = tab.isDiscarded
+          ? '<i class="fa-solid fa-moon text-amber-500/80 text-[10px]" title="休止中"></i>'
+          : `<i class="fa-solid ${tab.url ? 'fa-globe text-brand-400' : 'fa-compass text-slate-500'} text-[10px]"></i>`;
+
+        tabEl.innerHTML = `
+          ${statusIcon}
+          <span class="truncate flex-1">${escapeHtml(tab.title)}</span>
+          <button type="button" onclick="closeTab('${tab.id}', event)" class="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition">
+            <i class="fa-solid fa-xmark text-[10px]"></i>
+          </button>
+        `;
+        elements.tabContainer.appendChild(tabEl);
+      });
+
+      if (elements.mobileTabCounter) {
+        elements.mobileTabCounter.textContent = appState.tabs.length;
+      }
+      renderMobileTabList();
+    }
+
+    function renderMobileTabList() {
+      if (!elements.mobileTabList) return;
+      elements.mobileTabList.innerHTML = '';
+      appState.tabs.forEach(tab => {
+        const isActive = tab.id === appState.activeTabId;
+        const card = document.createElement('div');
+        card.className = `flex items-center justify-between p-3.5 rounded-2xl border transition cursor-pointer ${
+          isActive ? 'bg-slate-900 border-brand-500/80 text-white' : 'bg-slate-900/50 border-slate-800 text-slate-300'
+        } ${tab.isDiscarded ? 'opacity-60' : ''}`;
+        card.onclick = () => {
+          switchTab(tab.id);
+          elements.mobileTabModal.classList.add('hidden');
+        };
+        const statusIcon = tab.isDiscarded
+          ? '<i class="fa-solid fa-moon text-amber-500 text-base" title="休止中"></i>'
+          : `<i class="fa-solid ${tab.url ? 'fa-globe text-brand-400' : 'fa-compass text-slate-500'} text-base"></i>`;
+        card.innerHTML = `
+          <div class="flex items-center space-x-3 truncate flex-1 mr-2">
+            ${statusIcon}
+            <div class="truncate">
+              <div class="font-semibold text-xs truncate flex items-center space-x-1">
+                <span>${escapeHtml(tab.title)}</span>
+                ${tab.isDiscarded ? '<span class="text-[9px] bg-slate-800 text-amber-400 px-1 rounded">スリープ</span>' : ''}
+              </div>
+              <div class="text-[10px] text-slate-500 truncate font-mono">${escapeHtml(tab.url || '新規タブ')}</div>
+            </div>
+          </div>
+          <button type="button" onclick="closeTab('${tab.id}', event)" class="p-2 text-slate-400 hover:text-red-400 transition">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        `;
+        elements.mobileTabList.appendChild(card);
+      });
+    }
+
+    // ---------- History ----------
+    function saveHistory(url, title) {
+      if (!url || url === 'about:blank') return;
+      appState.history = appState.history.filter(item => item.url !== url);
+      const now = new Date();
+      const timeStr = now.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }) + ' ' +
+                      now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+      appState.history.unshift({
+        url,
+        title: title || url,
+        time: timeStr,
+        timestamp: Date.now()
+      });
+      if (appState.history.length > 300) appState.history = appState.history.slice(0, 300);
+      localStorage.setItem('ep_history', JSON.stringify(appState.history));
+    }
+
+    function renderHistoryList(filterQuery = '') {
+      if (!elements.historyList) return;
+      elements.historyList.innerHTML = '';
+      const query = filterQuery.toLowerCase().trim();
+      const filtered = appState.history.filter(item =>
+        item.title.toLowerCase().includes(query) || item.url.toLowerCase().includes(query)
+      );
+      if (filtered.length === 0) {
+        elements.historyList.innerHTML = '<div class="text-center py-8 text-slate-500 text-xs">閲覧履歴はありません</div>';
+        return;
+      }
+      filtered.forEach((item) => {
+        const div = document.createElement('div');
+        div.className = 'group flex items-center justify-between p-2.5 bg-slate-950/60 hover:bg-slate-800/60 border border-slate-800/80 rounded-xl text-xs transition cursor-pointer';
+        div.onclick = () => {
+          elements.historyModal.classList.add('hidden');
+          navigateTo(item.url);
+        };
+        div.innerHTML = `
+          <div class="flex items-center space-x-3 truncate flex-1 mr-2">
+            <i class="fa-solid fa-globe text-brand-400 text-sm flex-shrink-0"></i>
+            <div class="truncate">
+              <div class="font-semibold text-slate-200 truncate group-hover:text-brand-400 transition">${escapeHtml(item.title)}</div>
+              <div class="text-[10px] text-slate-500 truncate font-mono">${escapeHtml(item.url)}</div>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2 flex-shrink-0">
+            <span class="text-[10px] text-slate-500 font-mono">${item.time}</span>
+            <button type="button" onclick="deleteHistoryItem('${escapeHtml(item.url)}', event)" class="p-1 text-slate-500 hover:text-red-400 transition" title="削除">
+              <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+          </div>
+        `;
+        elements.historyList.appendChild(div);
+      });
+    }
+
+    function deleteHistoryItem(url, e) {
+      if (e) e.stopPropagation();
+      appState.history = appState.history.filter(item => item.url !== url);
+      localStorage.setItem('ep_history', JSON.stringify(appState.history));
+      renderHistoryList(elements.historySearchInput ? elements.historySearchInput.value : '');
+    }
+
+    // ---------- Navigation (NO PROXY) ----------
+    function resolveTargetUrl(input) {
+      let trimmed = (input || '').trim();
+      if (!trimmed) return '';
+      // 検索クエリ判定
+      const looksLikeUrl = /^(https?:\/\/)/i.test(trimmed) ||
+                           /^([\w-]+\.)+[\w-]+(\/.*)?$/i.test(trimmed) ||
+                           trimmed.startsWith('localhost') ||
+                           trimmed.startsWith('file://');
+      if (!looksLikeUrl) {
+        return appState.searchEngine + encodeURIComponent(trimmed);
+      }
+      if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.startsWith('file://')) {
+        trimmed = 'https://' + trimmed;
+      }
+      return trimmed;
+    }
+
+    function navigateTo(rawInput, addToHistory = true) {
+      const targetUrl = resolveTargetUrl(rawInput);
+      if (!targetUrl) return;
+
+      const activeTab = getActiveTab();
+      activeTab.url = targetUrl;
+      activeTab.isDiscarded = false;
+      activeTab.lastActiveTime = Date.now();
+      elements.urlInput.value = targetUrl;
+      updateSecurityIcon(targetUrl);
+
+      try {
+        const urlObj = new URL(targetUrl);
+        if (!activeTab.title || activeTab.title === '新しいタブ') {
+          activeTab.title = urlObj.hostname;
+        }
+      } catch (_) {
+        activeTab.title = targetUrl;
+      }
+
+      hideSpeedDial();
+      renderTabs();
+      updateViewports();
+
+      const wv = getOrCreateWebviewForTab(activeTab);
+      // 確実に表示
+      wv.classList.remove('hidden');
+
+      try {
+        wv.loadURL(targetUrl);
+      } catch (err) {
+        console.error('loadURL failed', err);
+      }
+      updateNavButtons();
+    }
+
+    function updateSecurityIcon(url) {
+      if (!elements.securityIcon) return;
+      if (!url || url === 'about:blank') {
+        elements.securityIcon.className = 'fa-solid fa-lock text-slate-500 text-xs mr-2 transition';
+        return;
+      }
+      if (url.startsWith('https://')) {
+        elements.securityIcon.className = 'fa-solid fa-lock text-emerald-400 text-xs mr-2 transition';
+      } else if (url.startsWith('http://')) {
+        elements.securityIcon.className = 'fa-solid fa-lock-open text-amber-400 text-xs mr-2 transition';
+      } else {
+        elements.securityIcon.className = 'fa-solid fa-file text-slate-400 text-xs mr-2 transition';
+      }
+    }
+
+    function showSpeedDial() {
+      elements.speedDialPage.classList.remove('hidden');
+      // hide all webviews when on start page
+      appState.tabs.forEach(tab => {
+        const wv = document.getElementById(getWebviewId(tab.id));
+        if (wv) wv.classList.add('hidden');
+      });
+      elements.urlInput.value = '';
+      updateSecurityIcon('');
+    }
+
+    function hideSpeedDial() {
+      elements.speedDialPage.classList.add('hidden');
+    }
+
+    function updateNavButtons() {
+      const activeTab = getActiveTab();
+      let canBack = false, canForward = false;
+      if (activeTab && activeTab.url) {
+        const wv = document.getElementById(getWebviewId(activeTab.id));
+        if (wv) {
+          try {
+            canBack = wv.canGoBack();
+            canForward = wv.canGoForward();
+          } catch (_) {}
+        }
+      }
+      elements.backBtn.disabled = !canBack;
+      elements.forwardBtn.disabled = !canForward;
+      if (elements.mobileBackBtn) elements.mobileBackBtn.disabled = !canBack;
+      if (elements.mobileForwardBtn) elements.mobileForwardBtn.disabled = !canForward;
+    }
+
+    function renderBookmarks() {
+      elements.bookmarksBar.querySelectorAll('.bm-item').forEach(el => el.remove());
+      appState.bookmarks.forEach(bm => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'bm-item px-2.5 py-0.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition truncate max-w-[140px] flex-shrink-0';
+        btn.textContent = bm.title;
+        btn.onclick = () => navigateTo(bm.url);
+        elements.bookmarksBar.appendChild(btn);
+      });
+    }
+
+    function startTabDiscardMonitor() {
+      setInterval(() => {
+        const now = Date.now();
+        appState.tabs.forEach(tab => {
+          if (
+            tab.id !== appState.activeTabId &&
+            tab.id !== appState.splitTabId &&
+            tab.url &&
+            !tab.isDiscarded &&
+            (now - tab.lastActiveTime > DISCARD_TIMEOUT_MS)
+          ) {
+            tab.isDiscarded = true;
+            removeWebviewForTab(tab.id);
+            renderTabs();
+          }
+        });
+      }, 20000);
+    }
+
+    function toggleTheme() {
+      appState.theme = appState.theme === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('ep_theme', appState.theme);
+      applyTheme();
+    }
+
+    function applyTheme() {
+      const isLight = appState.theme === 'light';
+      if (isLight) {
+        document.body.classList.add('light-mode');
+        if (elements.themeIcon) elements.themeIcon.className = 'fa-solid fa-sun text-amber-500';
+      } else {
+        document.body.classList.remove('light-mode');
+        if (elements.themeIcon) elements.themeIcon.className = 'fa-solid fa-moon text-slate-400';
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function renderDownloadList() {
+      if (!elements.downloadList) return;
+      elements.downloadList.innerHTML = '';
+      if (appState.downloads.length === 0) {
+        elements.downloadList.innerHTML = '<div class="text-center py-6 text-slate-500 text-xs">ダウンロード履歴はありません</div>';
+        return;
+      }
+      appState.downloads.forEach(dl => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-xs';
+        item.innerHTML = `
+          <div class="flex items-center space-x-2.5 truncate flex-1 mr-2">
+            <i class="fa-solid fa-file-code text-brand-400 text-base"></i>
+            <div class="truncate">
+              <div class="font-semibold text-slate-200 truncate">${escapeHtml(dl.filename)}</div>
+              <div class="text-[10px] text-slate-500 truncate">${escapeHtml(dl.url)}</div>
+            </div>
+          </div>
+          <span class="text-[10px] text-slate-500 font-mono">${dl.time}</span>
+        `;
+        elements.downloadList.appendChild(item);
+      });
+    }
+
+    function setupEventListeners() {
+      // Split
+      if (elements.splitToggleHeaderBtn) elements.splitToggleHeaderBtn.addEventListener('click', toggleSplitMode);
+      if (elements.splitToggleMenuBtn) {
+        elements.splitToggleMenuBtn.addEventListener('click', () => {
+          elements.moreMenu.classList.add('hidden');
+          toggleSplitMode();
+        });
+      }
+      if (elements.closeSplitBtn) elements.closeSplitBtn.addEventListener('click', toggleSplitMode);
+
+      if (elements.panePrimaryTabSelect) {
+        elements.panePrimaryTabSelect.addEventListener('change', (e) => switchTab(e.target.value));
+      }
+      if (elements.paneSecondaryTabSelect) {
+        elements.paneSecondaryTabSelect.addEventListener('change', (e) => {
+          appState.splitTabId = e.target.value;
+          updateViewports();
+          renderTabs();
+        });
+      }
+
+      // Menu
+      elements.menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        elements.moreMenu.classList.toggle('hidden');
+      });
+      document.addEventListener('click', () => elements.moreMenu.classList.add('hidden'));
+      elements.moreMenu.addEventListener('click', (e) => e.stopPropagation());
+
+      // History modal
+      elements.historyManagerBtn.addEventListener('click', () => {
+        elements.moreMenu.classList.add('hidden');
+        renderHistoryList();
+        elements.historyModal.classList.remove('hidden');
+      });
+      elements.closeHistoryModalBtn.addEventListener('click', () => elements.historyModal.classList.add('hidden'));
+      elements.historySearchInput.addEventListener('input', (e) => renderHistoryList(e.target.value));
+      elements.clearHistoryBtn.addEventListener('click', () => {
+        if (confirm('閲覧履歴をすべて消去しますか？')) {
+          appState.history = [];
+          localStorage.setItem('ep_history', JSON.stringify([]));
+          renderHistoryList();
+        }
+      });
+
+      // Zoom
+      elements.zoomInBtn.addEventListener('click', () => {
+        if (appState.zoomLevel < 300) {
+          appState.zoomLevel += 10;
+          applyZoom();
+        }
+      });
+      elements.zoomOutBtn.addEventListener('click', () => {
+        if (appState.zoomLevel > 30) {
+          appState.zoomLevel -= 10;
+          applyZoom();
+        }
+      });
+
+      // Fullscreen
+      elements.fullscreenBtn.addEventListener('click', () => {
+        elements.moreMenu.classList.add('hidden');
+        const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
+        if (!fsElement) {
+          const docEl = document.documentElement;
+          const requestFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
+          if (requestFs) requestFs.call(docEl).catch(() => {});
+        } else {
+          const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+          if (exitFs) exitFs.call(document).catch(() => {});
+        }
+      });
+      const onFullscreenChange = () => {
+        const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
+        elements.fullscreenBtnText.textContent = fsElement ? '全画面表示を解除' : '全画面表示';
+      };
+      document.addEventListener('fullscreenchange', onFullscreenChange);
+      document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+
+      // View Source
+      elements.viewSourceBtn.addEventListener('click', async () => {
+        elements.moreMenu.classList.add('hidden');
+        const activeTab = getActiveTab();
+        const wv = activeTab ? document.getElementById(getWebviewId(activeTab.id)) : null;
+        if (!wv || !activeTab?.url) {
+          elements.sourceTextarea.value = '<!-- 表示中のWebページはありません -->';
+        } else {
+          elements.sourceTextarea.value = '取得中...';
+          try {
+            // webview から HTML を取得
+            const html = await wv.executeJavaScript('document.documentElement.outerHTML');
+            elements.sourceTextarea.value = html || '<!-- 取得できませんでした -->';
+          } catch (err) {
+            elements.sourceTextarea.value = `<!-- エラー: ${err.message} -->`;
+          }
+        }
+        elements.viewSourceModal.classList.remove('hidden');
+      });
+      elements.closeSourceModalBtn.addEventListener('click', () => elements.viewSourceModal.classList.add('hidden'));
+      elements.copySourceBtn.addEventListener('click', () => {
+        const code = elements.sourceTextarea.value;
+        if (!code) return;
+        navigator.clipboard.writeText(code).then(() => {
+          elements.copySourceBtn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i><span>コピー完了</span>';
+          setTimeout(() => {
+            elements.copySourceBtn.innerHTML = '<i class="fa-solid fa-copy"></i><span>コピー</span>';
+          }, 2000);
+        }).catch(() => {
+          // fallback
+          const temp = document.createElement('textarea');
+          temp.value = code;
+          document.body.appendChild(temp);
+          temp.select();
+          document.execCommand('copy');
+          document.body.removeChild(temp);
+        });
+      });
+
+      // Download manager
+      elements.downloadManagerBtn.addEventListener('click', () => {
+        elements.moreMenu.classList.add('hidden');
+        renderDownloadList();
+        elements.downloadModal.classList.remove('hidden');
+      });
+      elements.closeDownloadModalBtn.addEventListener('click', () => elements.downloadModal.classList.add('hidden'));
+      elements.downloadCurrentPageBtn.addEventListener('click', async () => {
+        const activeTab = getActiveTab();
+        if (!activeTab || !activeTab.url) return;
+        const wv = document.getElementById(getWebviewId(activeTab.id));
+        let content = '<html><body>No Content</body></html>';
+        try {
+          if (wv) content = await wv.executeJavaScript('document.documentElement.outerHTML');
+        } catch (_) {}
+        let filename = 'page.html';
+        try {
+          const u = new URL(activeTab.url);
+          filename = (u.hostname.replace(/[^a-z0-9]/gi, '_') || 'page') + '.html';
+        } catch (_) {}
+        const blob = new Blob([content], { type: 'text/html;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        appState.downloads.unshift({
+          filename,
+          url: activeTab.url,
+          time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+        });
+        localStorage.setItem('ep_downloads', JSON.stringify(appState.downloads));
+        renderDownloadList();
+      });
+      elements.clearDownloadHistoryBtn.addEventListener('click', () => {
+        appState.downloads = [];
+        localStorage.setItem('ep_downloads', JSON.stringify(appState.downloads));
+        renderDownloadList();
+      });
+
+      // URL form
+      elements.urlForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        navigateTo(elements.urlInput.value);
+      });
+
+      // New tab buttons
+      if (elements.newTabBtn) elements.newTabBtn.addEventListener('click', () => createTab());
+      if (elements.urlNewTabBtn) elements.urlNewTabBtn.addEventListener('click', () => createTab());
+      if (elements.mobileQuickPlusBtn) elements.mobileQuickPlusBtn.addEventListener('click', () => createTab());
+      if (elements.mobileNewTabBtn) {
+        elements.mobileNewTabBtn.addEventListener('click', () => {
+          createTab();
+          elements.mobileTabModal.classList.add('hidden');
+        });
+      }
+
+      const handleHome = () => {
+        const activeTab = getActiveTab();
+        activeTab.url = '';
+        activeTab.title = '新しいタブ';
+        const wv = document.getElementById(getWebviewId(activeTab.id));
+        if (wv) {
+          try { wv.loadURL('about:blank'); } catch (_) {}
+          wv.classList.add('hidden');
+        }
+        showSpeedDial();
+        renderTabs();
+      };
+
+      const handleReload = () => {
+        const activeTab = getActiveTab();
+        const wv = activeTab ? document.getElementById(getWebviewId(activeTab.id)) : null;
+        if (wv) {
+          try {
+            if (wv.isLoading && wv.isLoading()) wv.stop();
+            else wv.reload();
+          } catch (_) {
+            if (activeTab.url) navigateTo(activeTab.url);
+          }
+        }
+      };
+
+      const handleBack = () => {
+        const activeTab = getActiveTab();
+        const wv = activeTab ? document.getElementById(getWebviewId(activeTab.id)) : null;
+        if (wv && wv.canGoBack()) wv.goBack();
+      };
+
+      const handleForward = () => {
+        const activeTab = getActiveTab();
+        const wv = activeTab ? document.getElementById(getWebviewId(activeTab.id)) : null;
+        if (wv && wv.canGoForward()) wv.goForward();
+      };
+
+      elements.homeBtn.addEventListener('click', handleHome);
+      elements.reloadBtn.addEventListener('click', handleReload);
+      elements.backBtn.addEventListener('click', handleBack);
+      elements.forwardBtn.addEventListener('click', handleForward);
+
+      if (elements.mobileHomeBtn) elements.mobileHomeBtn.addEventListener('click', handleHome);
+      if (elements.mobileBackBtn) elements.mobileBackBtn.addEventListener('click', handleBack);
+      if (elements.mobileForwardBtn) elements.mobileForwardBtn.addEventListener('click', handleForward);
+
+      if (elements.mobileTabsBtn) {
+        elements.mobileTabsBtn.addEventListener('click', () => {
+          renderMobileTabList();
+          elements.mobileTabModal.classList.remove('hidden');
+        });
+      }
+      if (elements.closeMobileTabModalBtn) {
+        elements.closeMobileTabModalBtn.addEventListener('click', () => {
+          elements.mobileTabModal.classList.add('hidden');
+        });
+      }
+
+      if (elements.themeToggleBtn) {
+        elements.themeToggleBtn.addEventListener('click', toggleTheme);
+      }
+
+      elements.bookmarkBtn.addEventListener('click', () => {
+        const activeTab = getActiveTab();
+        if (!activeTab || !activeTab.url) return;
+        // 重複チェック
+        if (appState.bookmarks.some(b => b.url === activeTab.url)) return;
+        appState.bookmarks.push({
+          title: activeTab.title || activeTab.url,
+          url: activeTab.url
+        });
+        localStorage.setItem('ep_bookmarks', JSON.stringify(appState.bookmarks));
+        renderBookmarks();
+      });
+    }
+
+    // グローバルに公開（HTMLのonclickから呼ばれるため）
+    window.navigateTo = navigateTo;
+    window.closeTab = closeTab;
+    window.deleteHistoryItem = deleteHistoryItem;
+
+    window.onload = () => {
+      applyTheme();
+      renderBookmarks();
+      setupEventListeners();
+      startTabDiscardMonitor();
+      createTab();
+    };
+  </script>
+  </script>
+</body>
+</html>
